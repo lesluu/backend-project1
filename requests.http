@@ -1,0 +1,22 @@
+GET http://localhost:8000/health
+
+###
+GET http://localhost:8000/api/tickets
+
+###
+POST http://localhost:8000/api/tickets
+Content-Type: application/json
+
+{"subject": "Не работает вход", "description": "Ошибка 500", "status": "open"}
+
+###
+GET http://localhost:8000/api/tickets/1
+
+###
+PATCH http://localhost:8000/api/tickets/1
+Content-Type: application/json
+
+{"status": "closed"}
+
+###
+DELETE http://localhost:8000/api/tickets/1
