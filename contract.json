@@ -1,0 +1,17 @@
+{
+  "base_url": "http://localhost:8000",
+  "resource": "tickets",
+  "id_field": "id",
+  "missing_id": "999999",
+  "list_key": null,
+  "create": { "subject": "Не работает вход", "description": "Ошибка 500", "status": "open" },
+  "update": { "status": "closed" },
+  "required_field": "subject",
+  "errors": [
+    { "body": { "subject": "" }, "field": "subject" },
+    { "body": { "status": "invalid" }, "field": "status" },
+    { "body": { "description": "" }, "field": "description" }
+  ],
+  "filter": { "param": "status", "value": "open", "other": "closed" },
+  "openapi_path": "/api/schema/"
+}
