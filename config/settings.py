@@ -78,8 +78,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'support_db',
+        'USER': 'postgres',
+        'PASSWORD': 'OL2710',
+        'HOST': 'localhost',
+        'PORT': '5432',
     }
 }
 
@@ -130,7 +134,7 @@ REST_FRAMEWORK = {
 
 SPECTACULAR_SETTINGS = {
     'TITLE': 'Support Service API',
-    'DESCRIPTION': 'Лаба 1 — HTTP CRUD в памяти',
+    'DESCRIPTION': 'Лаба 2 — База данных',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
     'DEFAULT_GENERATOR_CLASS': 'drf_spectacular.generators.SchemaGenerator',

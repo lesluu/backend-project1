@@ -1,12 +1,11 @@
-from django.shortcuts import render
-
-# Create your views here.
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from django.shortcuts import get_object_or_404
+from django.db.models import Count
 
-from .models import Ticket, store
-from .serializers import TicketSerializer
+from .models import Ticket, Reply
+from .serializers import TicketSerializer, ReplySerializer
 
 
 class HealthView(APIView):
@@ -16,72 +15,70 @@ class HealthView(APIView):
 
 class TicketListCreateView(APIView):
     def get(self, request):
-        items = store.all()
+        items = Ticket.objects.all()
 
-        status_filter = request.query_params.get("status")
+        q = request.query_params.get('q')
+        if q:
+            items = items.filter(subject__icontains=q)
+
+        status_filter = request.query_params.get('status')
         if status_filter:
-            items = [t for t in items if t.status == status_filter]
+            items = items.filter(status=status_filter)
 
-        limit = request.query_params.get("limit")
-        offset = request.query_params.get("offset", 0)
-        if limit is not None:
-            try:
-                limit = int(limit)
-                offset = int(offset)
-            except ValueError:
-                return Response(
-                    {"error": "limit и offset должны быть числами", "field": "limit"},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-            items = items[offset: offset + limit]
-
-        return Response([t.to_dict() for t in items])
+        return Response(TicketSerializer(items, many=True).data)
 
     def post(self, request):
         serializer = TicketSerializer(data=request.data)
-        if not serializer.is_valid():
-            field, messages = next(iter(serializer.errors.items()))
-            return Response(
-                {"error": str(messages[0]), "field": field},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        data = serializer.validated_data
-        ticket = Ticket(
-            subject=data["subject"],
-            description=data.get("description", ""),
-            status=data.get("status", "open"),
-        )
-        store.add(ticket)
-        return Response(ticket.to_dict(), status=status.HTTP_201_CREATED)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        field, messages = next(iter(serializer.errors.items()))
+        return Response({"error": str(messages[0]), "field": field}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class TicketDetailView(APIView):
     def get(self, request, pk):
-        ticket = store.get(pk)
-        if ticket is None:
-            return Response({"error": "not found", "field": "id"}, status=404)
-        return Response(ticket.to_dict())
+        ticket = get_object_or_404(Ticket, pk=pk)
+        return Response(TicketSerializer(ticket).data)
 
     def patch(self, request, pk):
-        ticket = store.get(pk)
-        if ticket is None:
-            return Response({"error": "not found", "field": "id"}, status=404)
-
-        serializer = TicketSerializer(data=request.data, partial=True)
-        if not serializer.is_valid():
-            field, messages = next(iter(serializer.errors.items()))
-            return Response(
-                {"error": str(messages[0]), "field": field},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        for key, value in serializer.validated_data.items():
-            setattr(ticket, key, value)
-        return Response(ticket.to_dict())
+        ticket = get_object_or_404(Ticket, pk=pk)
+        serializer = TicketSerializer(ticket, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        field, messages = next(iter(serializer.errors.items()))
+        return Response({"error": str(messages[0]), "field": field}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, pk):
-        ticket = store.delete(pk)
-        if ticket is None:
-            return Response({"error": "not found", "field": "id"}, status=404)
+        ticket = get_object_or_404(Ticket, pk=pk)
+        ticket.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class ReplyListCreateView(APIView):
+    def get(self, request, ticket_id):
+        ticket = get_object_or_404(Ticket, pk=ticket_id)
+        replies = ticket.replies.all()
+        return Response(ReplySerializer(replies, many=True).data)
+
+    def post(self, request, ticket_id):
+        ticket = get_object_or_404(Ticket, pk=ticket_id)
+
+        if ticket.status == 'closed':
+            return Response(
+                {"error": "Нельзя ответить на закрытое обращение", "field": "status"},
+                status=status.HTTP_409_CONFLICT
+            )
+
+        serializer = ReplySerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(ticket=ticket)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StatsView(APIView):
+    def get(self, request):
+        stats = Ticket.objects.annotate(reply_count=Count('replies')).values('id', 'subject', 'reply_count')
+        return Response(list(stats))

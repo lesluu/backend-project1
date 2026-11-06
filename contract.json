@@ -13,5 +13,20 @@
     { "body": { "description": "" }, "field": "description" }
   ],
   "filter": { "param": "status", "value": "open", "other": "closed" },
-  "openapi_path": "/api/schema/"
+  "openapi_path": "/api/schema/",
+  "text_field": "subject",
+  "search": { "param": "q", "field": "subject" },
+  "child": {
+    "resource": "replies",
+    "create": { "author": "Иванов", "text": "Спасибо, проблема решена" },
+    "parent_field": "ticket_id"
+  },
+  "rule": {
+    "description": "Нельзя ответить на закрытое обращение",
+    "parent": { "status": "closed" },
+    "setup": [],
+    "violate": { "method": "POST", "path": "/api/tickets/{id}/replies", "body": { "author": "Петров", "text": "Проблема" } },
+    "expect_status": 409
+  },
+  "stats_path": "/api/tickets/stats"
 }

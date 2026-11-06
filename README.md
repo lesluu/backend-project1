@@ -30,3 +30,43 @@ py manage.py runserver
 | GET | `/api/tickets/{id}` | Получить одну запись | 200; 404 |
 | PATCH | `/api/tickets/{id}` | Изменить | 200; 400; 404 |
 | DELETE | `/api/tickets/{id}` | Удалить | 204; 404 |
+| GET | `/api/tickets/{id}/replies` | Список ответов | 200 |
+| POST | `/api/tickets/{id}/replies` | Создать ответ | 201; 409 если обращение закрыто |
+| GET | `/api/tickets/stats` | Статистика по ответам | 200 |
+
+## ER-диаграмма
+
+```mermaid
+erDiagram
+    tickets ||--o{ replies : "имеет"
+    tickets {
+        int id PK
+        varchar subject
+        varchar description
+        varchar status
+    }
+    replies {
+        int id PK
+        int ticket_id FK
+        varchar author
+        text text
+        datetime created_at
+    }
+```
+
+## Индекс и EXPLAIN
+
+Индекс создан на поле `status` (часто используемый фильтр):
+
+```sql
+CREATE INDEX idx_ticket_status ON tickets_ticket (status);
+```
+Проверка через EXPLAIN:
+
+```sql
+EXPLAIN QUERY PLAN SELECT * FROM tickets_ticket WHERE status = 'open';
+```
+Вывод:
+
+text
+(3, 0, 0, 'SEARCH tickets_ticket USING INDEX idx_ticket_status (status=?)')

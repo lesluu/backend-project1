@@ -19,4 +19,4 @@ Content-Type: application/json
 {"status": "closed"}
 
 ###
-DELETE http://localhost:8000/api/tickets/1
+DELETE http://localhost:8000/api/tickets/7
